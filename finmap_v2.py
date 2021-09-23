@@ -50,7 +50,7 @@ class Finmap:
                     projects.append(proj['label'])
         except:
             print('failed to get list of finmap projects')
-        return projects
+        return set(projects)
         
     def make_finmap_proj(self, proj):
         headers = self.make_common_header()
@@ -89,7 +89,11 @@ class DirCreator:
                 print('FAILED!!!')
 
     def get_project_dirs(self):
-        return os.listdir(self.PROJ_BASE_DIR) if os.path.exists(self.PROJ_BASE_DIR) else []
+        return set(os.listdir(self.PROJ_BASE_DIR) if os.path.exists(self.PROJ_BASE_DIR) else [])
+    
+    
+class Worksection:
+    apiKey = ''
     
 
 def run():
@@ -99,8 +103,8 @@ def run():
         dirs = dir_creator.get_project_dirs()
         projects = finmap.get_projects()
         
-        finmap_2_dirs = set(projects) - set(dirs)
-        dirs_2_finmap = set(dirs) - set(projects)
+        finmap_2_dirs = projects - dirs
+        dirs_2_finmap = dirs - projects
         
         for proj in finmap_2_dirs:
             dir_creator.make_project_dir(proj)
