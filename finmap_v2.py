@@ -57,12 +57,10 @@ class Finmap:
             request_url = self.make_request_url(self.PROJECTS)
             headers = self.make_common_header()
             
-            logging.debug('Finmap:get_projects - request_url: %s', request_url)
-            logging.debug('Finmap:get_projects - headers: %s', headers)
-            
             projects_response = requests.get(url=request_url, headers=headers)
-            
-            logging.debug('Finmap:get_projects - response: %s', projects_response)
+
+            logging.debug('Finmap:get_projects - \n\trequest_url: %s\n\theaders: %s\n\tresponse: %s',
+                          request_url, headers, projects_response)
             
             if (projects_response.status_code == 200):
                 status = True
@@ -83,13 +81,10 @@ class Finmap:
             headers['Content-Type'] = 'application/json'
             data = json.dumps({'label': proj})
             
-            logging.debug('Finmap:get_projects - request_url: %s', request_url)
-            logging.debug('Finmap:get_projects - headers: %s', headers)
-            logging.debug('Finmap:get_projects - data: %s', data)
-        
             projects_response = requests.post(url=request_url, headers=headers, data=data)
             
-            logging.debug('Finmap:make_finmap_proj - response: %s', projects_response)
+            logging.debug('Finmap:get_projects - \n\trequest_url: %s\n\theaders: %s\n\tdata: %s\n\tresponse: %s',
+                           request_url, headers, data, projects_response)
                         
             status = projects_response.status_code == 201
         except Exception as e:
@@ -150,12 +145,9 @@ class Worksection:
             request_url = self.make_request_url(self.GET_PROJECTS)
             headers = self.make_common_header()
             
-            logging.debug('Worksection:get_projects - request_url: %s', request_url)
-            logging.debug('Worksection:get_projects - headers: %s', headers)
-            
             projects_response = requests.get(url = request_url, headers=headers)
             
-            logging.debug('Worksection:get_projects - projects_response: %s', projects_response)
+            logging.debug('Worksection:get_projects - \n\trequest_url: %s\n\theaders: %s\n\tprojects_response: %s', request_url, headers, projects_response)
             
             if projects_response.status_code == 200:
                 jProjects = json.loads(projects_response._content.decode('utf8').replace("'", '"'))
@@ -172,11 +164,9 @@ class Worksection:
         try:
             request_url = self.make_request_url(self.POST_PROJECTS)
             
-            logging.debug('Worksection:make_worksection_proj - request_url: %s', request_url)
-            
             projects_response = requests.get(url=request_url)
-
-            logging.debug('Worksection:make_worksection_proj - projects_response: %s', projects_response)
+    
+            logging.debug('Worksection:make_worksection_proj - \n\trequest_url: %s\n\tprojects_response: %s', request_url, projects_response)
 
             if projects_response.status_code == 200:
                 jProjects = json.loads(projects_response._content.decode('utf8').replace("'", '"'))
@@ -200,9 +190,7 @@ def run():
         fm_projects, fn_status  = finmap.get_projects()
         dirs = dir_creator.get_project_dirs()
 
-        logging.debug('run - ws_projects: %s', ws_projects)
-        logging.debug('run - fm_projects: %s', fm_projects)
-        logging.debug('run - dirs: %s', dirs)
+        logging.debug('run - \n\tws_projects: %s\n\tfm_projects: %s\n\tdirs: %s', ws_projects, fm_projects, dirs)
         
         if len(ws_initial_set) == 0 and ws_status == True:
             ws_initial_set = ws_projects
@@ -212,26 +200,22 @@ def run():
             
         if len(dir_initial_set) == 0:
             dir_initial_set = dirs
+         
+        logging.debug('run - \n\tfm_initial_set: %s\n\tws_initial_set: %s\n\tdir_initial_set: %s', fm_initial_set, ws_initial_set, dir_initial_set)
             
-        logging.debug('run - fm_initial_set: %s', fm_initial_set)
-        logging.debug('run - ws_initial_set: %s', ws_initial_set)
-        logging.debug('run - dir_initial_set: %s', dir_initial_set)
             
         initial_set = ws_initial_set.union(fm_initial_set).union(dir_initial_set)
         base_set = ws_projects.union(dirs).union(fm_projects)
         update_set = base_set - initial_set
         
-        logging.debug('run - initial_set: %s', initial_set)
-        logging.debug('run - base_set: %s', base_set)
-        logging.debug('run - update_set: %s', update_set)
+        logging.debug('run - \n\tinitial_set: %s\n\tbase_set: %s\n\tupdate_set: %s', initial_set, base_set, update_set)
+        
         
         dirs_to_create = update_set - dirs
         fm_to_create = update_set - fm_projects
         ws_to_create = update_set - ws_projects
-        
-        logging.debug('run - dirs_to_create: %s', dirs_to_create)
-        logging.debug('run - fm_to_create: %s', fm_to_create)
-        logging.debug('run - ws_to_create: %s', ws_to_create)
+
+        logging.debug('run - \n\tdirs_to_create: %s\n\tfm_to_create: %s\n\tws_to_create: %s', dirs_to_create, fm_to_create, ws_to_create)
         
         for proj in dirs_to_create:
             dir_creator.make_project_dir(proj)
