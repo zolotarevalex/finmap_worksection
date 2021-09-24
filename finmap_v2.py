@@ -119,8 +119,7 @@ class Worksection:
         status = False
         try:
             projects_response = requests.get(self.make_request_url(self.GET_PROJECTS),
-                                             headers=self.make_common_header(),
-                                             data=json.dumps({'filter': ['active', 'pending']}))
+                                             headers=self.make_common_header())
             if projects_response.status_code == 200:
                 jProjects = json.loads(projects_response._content.decode('utf8').replace("'", '"'))
                 if jProjects['status'] == 'ok':
@@ -156,6 +155,8 @@ def run():
         ws_projects, ws_status = worksection.get_projects()
         fm_projects, fn_status  = finmap.get_projects()
         dirs = dir_creator.get_project_dirs()
+        
+        #print(len(ws_projects))
         
         if len(ws_initial_set) == 0 and ws_status == True:
             ws_initial_set = ws_projects
