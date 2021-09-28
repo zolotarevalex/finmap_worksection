@@ -10,10 +10,10 @@ import hashlib
 import logging
 from logging.handlers import RotatingFileHandler
 
-logging.basicConfig(filename='fn_ws.log',
+logging.basicConfig(filename='fm_ws.log',
                     format='%(asctime)s - %(levelname)s:%(message)s',
                     datefmt='%m/%d/%Y %I:%M:%S %p',
-                    level=logging.DEBUG)
+                    level=logging.INFO)
                     
 logging.getLogger().addHandler(RotatingFileHandler(filename='fn_ws.log', maxBytes=100000000, backupCount=10))
  
@@ -90,7 +90,13 @@ class Finmap:
         except Exception as e:
             logging.error('Finmap:make_finmap_proj - excetpion caught: %s', str(e))
         return status
-    
+        
+        
+    def get_initial_data(self):
+        while True:
+            fm_projects, fn_status  = self.get_projects()
+            if fn_status == True:
+                return fm_projects
     
 
 class DirCreator:
@@ -182,42 +188,35 @@ class Worksection:
         except Exception as e:
             logging.error('Worksection:make_worksection_proj - excetpion caught: %s', str(e))
         return status
-    
+        
+    def get_initial_data(self):
+        while True:
+            ws_projects, ws_status = self.get_projects()
+            if ws_status == True:
+                return ws_projects
 
 def run():
     finmap = Finmap() 
     dir_creator = DirCreator() 
     worksection = Worksection()
+
+    fm_initial_set = finmap.get_initial_data()    
+    dir_initial_set = dir_creator.get_project_dirs()
+    ws_initial_set = worksection.get_initial_data()
     
-    fm_initial_set = set()
-    dir_initial_set = set()
-    ws_initial_set = set()
+    initial_set = ws_initial_set.union(fm_initial_set).union(dir_initial_set)
     
-    while True:
+    while True:   
         ws_projects, ws_status = worksection.get_projects()
         fm_projects, fn_status  = finmap.get_projects()
         dirs = dir_creator.get_project_dirs()
 
         logging.debug('run - \n\tws_projects: %s\n\tfm_projects: %s\n\tdirs: %s', ws_projects, fm_projects, dirs)
-        
-        if len(ws_initial_set) == 0 and ws_status == True:
-            ws_initial_set = ws_projects
-           
-        if len(fm_initial_set) == 0 and fn_status == True:
-            fm_initial_set = fm_projects
-            
-        if len(dir_initial_set) == 0:
-            dir_initial_set = dirs
-         
-        logging.debug('run - \n\tfm_initial_set: %s\n\tws_initial_set: %s\n\tdir_initial_set: %s', fm_initial_set, ws_initial_set, dir_initial_set)
-            
-            
-        initial_set = ws_initial_set.union(fm_initial_set).union(dir_initial_set)
+
         base_set = ws_projects.union(dirs).union(fm_projects)
         update_set = base_set - initial_set
         
         logging.debug('run - \n\tinitial_set: %s\n\tbase_set: %s\n\tupdate_set: %s', initial_set, base_set, update_set)
-        
         
         dirs_to_create = update_set - dirs
         fm_to_create = update_set - fm_projects
@@ -225,17 +224,27 @@ def run():
 
         logging.debug('run - \n\tdirs_to_create: %s\n\tfm_to_create: %s\n\tws_to_create: %s', dirs_to_create, fm_to_create, ws_to_create)
         
+        not_created = set()
+        
         for proj in dirs_to_create:
             dir_creator.make_project_dir(proj)
             
         for proj in fm_to_create:
             if finmap.make_finmap_proj(proj):
                 logging.info('run - %s finmap project CREATED!!!', proj)
+            else:
+                not_created.add(proj)
+                logging.error('run - failed to create %s finmap project', proj)
                 
         for proj in ws_to_create:
             if worksection.make_worksection_proj(proj):
                 logging.info('run - %s worksection project CREATED!!!', proj)
+            else:
+                not_created.add(proj)
+                logging.error('run - failed to create %s worksection project', proj)
                 
+        
+        initial_set = base_set - not_created
         
         time.sleep(1)
         
