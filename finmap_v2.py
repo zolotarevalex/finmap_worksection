@@ -13,7 +13,7 @@ from logging.handlers import RotatingFileHandler
 logging.basicConfig(filename='fn_ws.log',
                     format='%(asctime)s - %(levelname)s:%(message)s',
                     datefmt='%m/%d/%Y %I:%M:%S %p',
-                    level=logging.INFO)
+                    level=logging.DEBUG)
                     
 logging.getLogger().addHandler(RotatingFileHandler(filename='fn_ws.log', maxBytes=100000000, backupCount=10))
  
@@ -96,7 +96,7 @@ class Finmap:
 class DirCreator:
 #class members and constants secstion
     #PROJ_BASE_DIR = 'projects'
-    PROJ_BASE_DIR = ''
+    PROJ_BASE_DIR = '.'
 
 #class methonds sectio
     def make_proj_dir_path(self, project):
@@ -132,8 +132,14 @@ class Worksection:
     def make_md5(self, action, page = ''):
         return hashlib.md5((page + action + self.apiKey).encode('utf-8')).hexdigest()    
     
-    def make_request_url(self, action, page = ''):
+    def make_common_request_url(self, action, page = ''):
         return self.domain + self.apiUrl + action + '&hash=' + self.make_md5(action, page)
+    
+    def make_get_request_url(self, action, page = ''):
+        return self.make_common_request_url(action, page)
+        
+    def make_post_request_url(self, action, title, page = ''):
+        return self.make_common_request_url(action, page) + '&title=' + title
         
     def make_common_header(self):
         return {'accept': 'application/json',
@@ -143,7 +149,7 @@ class Worksection:
         projects = []
         status = False
         try:
-            request_url = self.make_request_url(self.GET_PROJECTS)
+            request_url = self.make_get_request_url(self.GET_PROJECTS)
             headers = self.make_common_header()
             
             projects_response = requests.get(url = request_url, headers=headers)
@@ -163,7 +169,7 @@ class Worksection:
     def make_worksection_proj(self, proj):
         status = False
         try:
-            request_url = self.make_request_url(self.POST_PROJECTS)
+            request_url = self.make_post_request_url(self.POST_PROJECTS, proj)
             
             projects_response = requests.get(url=request_url)
     
@@ -172,6 +178,7 @@ class Worksection:
             if projects_response.status_code == 200:
                 jProjects = json.loads(projects_response._content.decode('utf8').replace("'", '"'))
                 status = jProjects['status'] == 'ok'
+                logging.debug('Worksection:make_worksection_proj - \n\tresponse JSON:%s', jProjects)
         except Exception as e:
             logging.error('Worksection:make_worksection_proj - excetpion caught: %s', str(e))
         return status
