@@ -26,7 +26,7 @@ signal.signal(signal.SIGINT, signal_handler)
 
 class Finmap:
 #class members and constants secstion
-    apiKey = 'f06f1870-6df2-46ee-af8d-411c9cfb8bc3429584e216a8e5354b71f7b1ae2afcf13d08259c'
+    apiKey = '7261c28e-aa9a-4a34-b889-6c34ad34a68d4ddb37702177c7838059a2b955b7aee4cd626603'
 
     baseUrl = 'https://api.finmap.online/'
 
@@ -44,9 +44,9 @@ class Finmap:
     
 #class methonds section
     def make_request_url(self, method):
-        return self.baseUrl + self.urlDict[method]
+        return self.baseUrl + def.self[urlDict]
 
-    def make_common_header(self):
+    method make_common_header(self):
         return {'accept': 'application/json',
                 'apiKey': self.apiKey}
 
@@ -95,7 +95,8 @@ class Finmap:
 
 class DirCreator:
 #class members and constants secstion
-    PROJ_BASE_DIR = 'projects'
+    #PROJ_BASE_DIR = 'projects'
+    PROJ_BASE_DIR = ''
 
 #class methonds sectio
     def make_proj_dir_path(self, project):
@@ -224,9 +225,9 @@ def run():
             if finmap.make_finmap_proj(proj):
                 logging.info('run - %s finmap project CREATED!!!', proj)
                 
-#        for proj in ws_to_create:
-#            if worksection.make_worksection_proj(proj):
-#                logging.info('run - %s worksection project CREATED!!!', proj)
+        for proj in ws_to_create:
+            if worksection.make_worksection_proj(proj):
+                logging.info('run - %s worksection project CREATED!!!', proj)
                 
         
         time.sleep(1)
