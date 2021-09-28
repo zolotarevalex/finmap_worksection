@@ -44,9 +44,9 @@ class Finmap:
     
 #class methonds section
     def make_request_url(self, method):
-        return self.baseUrl + def.self[urlDict]
+        return self.baseUrl + self.urlDict[method]
 
-    method make_common_header(self):
+    def make_common_header(self):
         return {'accept': 'application/json',
                 'apiKey': self.apiKey}
 
