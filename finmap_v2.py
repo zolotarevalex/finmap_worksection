@@ -135,8 +135,14 @@ class DirCreator:
                     break              
         return result
         
-    def get_project_dirs(self):
-        return set(os.listdir(self.PROJ_BASE_DIR) if os.path.exists(self.PROJ_BASE_DIR) else [])
+    def get_project_dirs(self, base_dir=''):
+        dir_content = []
+        try:
+            dir_content = os.listdir(self.PROJ_BASE_DIR if len(base_dir) == 0 else base_dir) if os.path.exists(self.PROJ_BASE_DIR) else []
+        except Exception as e:
+            logging.error('DirCreator:get_project_dirs - excetpion caught: %s', str(e))
+        
+        return set([dir for dir in dir_content if os.path.isdir(dir)])
     
     
 class Worksection:
@@ -266,10 +272,12 @@ def run():
 def make_test_dir(test_dir, sub_dirs=[]):
     dir_creator = DirCreator()
     dir_creator.make_project_dir(test_dir, sub_dirs)
+    print(dir_creator.get_project_dirs())
+    print(dir_creator.get_project_dirs('sub_dir3'))
      
 def run_test():
     make_test_dir('test_dir1')
-    make_test_dir('test_dir1', ['sub_dir1', 'sub_dir2', ['sub_dir3', 'sub_dir31'], ['sub_dir2', 'sub_dir21'], 'sub_dir4/sub_dir4_1'])    
+    make_test_dir('test_dir1', ['sub_dir1', 'sub_dir2', ['sub_dir3', 'sub_dir31'], ['sub_dir2', 'sub_dir21'], 'sub_dir4/sub_dir4_1'])
         
 if __name__ == '__main__':
     logging.info('lights on')
