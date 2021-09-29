@@ -15,7 +15,7 @@ logging.basicConfig(filename='fm_ws.log',
                     datefmt='%m/%d/%Y %I:%M:%S %p',
                     level=logging.INFO)
                     
-logging.getLogger().addHandler(RotatingFileHandler(filename='fn_ws.log', maxBytes=100000000, backupCount=10))
+logging.getLogger().addHandler(RotatingFileHandler(filename='fm_ws.log', maxBytes=100000000, backupCount=10))
  
 def signal_handler(sig, frame):
     logging.info('You pressed Ctrl+C!')
@@ -105,22 +105,36 @@ class DirCreator:
     PROJ_BASE_DIR = '.'
 
 #class methonds sectio
-    def make_proj_dir_path(self, project):
-        return os.path.join(self.PROJ_BASE_DIR, project)
+    def make_dir_path(self, base_dir, sub_dir):
+        return os.path.join(base_dir, sub_dir) if type(sub_dir) == type(str()) else os.path.join(base_dir, *sub_dir)
 
-    def make_project_dir(self, proj_name):
-        proj_dir = self.make_proj_dir_path(proj_name)
-        if os.path.exists(proj_dir):
-            if not os.path.isdir(proj_dir):
-                logging.error('DirCreator:make_project_dir - %s already exists, but not a directory', proj_dir)
+    def make_dir(self, base_dir, sub_dir):
+        result = True
+        
+        new_dir = self.make_dir_path(base_dir, sub_dir)
+        if os.path.exists(new_dir):
+            if not os.path.isdir(new_dir):
+                logging.error('DirCreator:make_dir - %s already exists, but not a directory', new_dir)
+                result = False
         else:
-            logging.info('DirCreator:make_project_dir - creating %s dir', proj_dir)
-            os.makedirs(proj_dir)
-            if (os.path.exists(proj_dir)):
-                logging.info('DirCreator:make_project_dir - %s dir CREATED!!!', proj_dir)
+            logging.info('DirCreator:make_dir - creating %s dir', new_dir)
+            os.makedirs(new_dir)
+            if (os.path.exists(new_dir)):
+                logging.info('DirCreator:make_dir - %s dir CREATED!!!', new_dir)
             else:
-                logging.info('DirCreator:make_project_dir - %s dir creation FAILED!!!', proj_dir)
+                logging.info('DirCreator:make_dir - %s dir creation FAILED!!!', new_dir)
+                result = False
+        return result, new_dir
 
+    def make_project_dir(self, proj_name, sub_dirs = []):
+        result, proj_dir = self.make_dir(self.PROJ_BASE_DIR, proj_name)
+        if result == True:
+            for sub_dir in sub_dirs:
+                result,_ = self.make_dir(proj_dir, sub_dir)
+                if result == False:
+                    break              
+        return result
+        
     def get_project_dirs(self):
         return set(os.listdir(self.PROJ_BASE_DIR) if os.path.exists(self.PROJ_BASE_DIR) else [])
     
@@ -247,10 +261,20 @@ def run():
         initial_set = base_set - not_created
         
         time.sleep(1)
+
+
+def make_test_dir(test_dir, sub_dirs=[]):
+    dir_creator = DirCreator()
+    dir_creator.make_project_dir(test_dir, sub_dirs)
+     
+def run_test():
+    make_test_dir('test_dir1')
+    make_test_dir('test_dir1', ['sub_dir1', 'sub_dir2', ['sub_dir3', 'sub_dir31'], ['sub_dir2', 'sub_dir21'], 'sub_dir4/sub_dir4_1'])    
         
 if __name__ == '__main__':
     logging.info('lights on')
     run()
+    #run_test()
     logging.info('lights off')
 
 
