@@ -103,8 +103,12 @@ class DirCreator:
 #class members and constants secstion
     #PROJ_BASE_DIR = 'projects'
     PROJ_BASE_DIR = '.'
+    PROJ_STRUCTURE = ['Из текущих', 'Проект', 'Спецификация', 'КД', 'Фото']
 
 #class methonds sectio
+    def __init__(self):
+        os.chdir('..')
+    
     def make_dir_path(self, base_dir, sub_dir):
         return os.path.join(base_dir, sub_dir) if type(sub_dir) == type(str()) else os.path.join(base_dir, *sub_dir)
 
@@ -134,6 +138,9 @@ class DirCreator:
                 if result == False:
                     break              
         return result
+		
+    def make_project_dir_with_default_structure(self, proj_name):
+        return self.make_project_dir(proj_name, self.PROJ_STRUCTURE)
         
     def get_project_dirs(self, base_dir=''):
         dir_content = []
@@ -269,15 +276,14 @@ def run():
         time.sleep(1)
 
 
-def make_test_dir(test_dir, sub_dirs=[]):
+def make_test_dir(test_dir):
     dir_creator = DirCreator()
-    dir_creator.make_project_dir(test_dir, sub_dirs)
-    print(dir_creator.get_project_dirs())
-    print(dir_creator.get_project_dirs('sub_dir3'))
+    dir_creator.make_project_dir_with_default_structure(test_dir)
+    #print(dir_creator.get_project_dirs())
+    #print(dir_creator.get_project_dirs('sub_dir3'))
      
 def run_test():
-    make_test_dir('test_dir1')
-    make_test_dir('test_dir1', ['sub_dir1', 'sub_dir2', ['sub_dir3', 'sub_dir31'], ['sub_dir2', 'sub_dir21'], 'sub_dir4/sub_dir4_1'])
+    make_test_dir('final_test_dir222')
         
 if __name__ == '__main__':
     logging.info('lights on')
