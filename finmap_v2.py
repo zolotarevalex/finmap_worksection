@@ -254,7 +254,7 @@ def run():
         not_created = set()
         
         for proj in dirs_to_create:
-            dir_creator.make_project_dir(proj)
+            dir_creator.make_project_dir_with_default_structure(proj)
             
         for proj in fm_to_create:
             if finmap.make_finmap_proj(proj):
