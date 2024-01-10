@@ -21,83 +21,7 @@ def signal_handler(sig, frame):
     logging.info('You pressed Ctrl+C!')
     sys.exit(0)
 
-signal.signal(signal.SIGINT, signal_handler)
-
-
-class Finmap:
-#class members and constants secstion
-    apiKey = '7261c28e-aa9a-4a34-b889-6c34ad34a68d4ddb37702177c7838059a2b955b7aee4cd626603'
-
-    baseUrl = 'https://api.finmap.online/'
-
-    HEALTH = 'health'
-    PROJECTS = 'project'
-    CURRENCIES = 'currencies'
-    ACCOUNTS = 'accounts'
-    TAGS = 'tags'
-
-    urlDict = {HEALTH:'v2/health',
-               CURRENCIES:'v2/currencies',
-               ACCOUNTS: 'v2/accounts',
-               TAGS: 'v2/tags',
-               PROJECTS:'v2/projects'}
-    
-#class methonds section
-    def make_request_url(self, method):
-        return self.baseUrl + self.urlDict[method]
-
-    def make_common_header(self):
-        return {'accept': 'application/json',
-                'apiKey': self.apiKey}
-
-    def get_projects(self):
-        projects = []
-        status = False
-        try:
-            request_url = self.make_request_url(self.PROJECTS)
-            headers = self.make_common_header()
-            
-            projects_response = requests.get(url=request_url, headers=headers)
-
-            logging.debug('Finmap:get_projects - \n\trequest_url: %s\n\theaders: %s\n\tresponse: %s',
-                          request_url, headers, projects_response)
-            
-            if (projects_response.status_code == 200):
-                status = True
-                jProjects = json.loads(projects_response._content.decode('utf8').replace("'", '"'))
-                for proj in jProjects:
-                    projects.append(proj['label'])
-        except Exception as e:
-            logging.error('Finmap:get_projects - excetpion caught: %s', str(e))
-        return set(projects), status
-        
-    def make_finmap_proj(self, proj):
-        logging.info('Finmap:make_finmap_proj - creating: %s project', proj)
-        
-        status = False
-        try:
-            request_url = self.make_request_url(self.PROJECTS)
-            headers = self.make_common_header()
-            headers['Content-Type'] = 'application/json'
-            data = json.dumps({'label': proj})
-            
-            projects_response = requests.post(url=request_url, headers=headers, data=data)
-            
-            logging.debug('Finmap:get_projects - \n\trequest_url: %s\n\theaders: %s\n\tdata: %s\n\tresponse: %s',
-                           request_url, headers, data, projects_response)
-                        
-            status = projects_response.status_code == 201
-        except Exception as e:
-            logging.error('Finmap:make_finmap_proj - excetpion caught: %s', str(e))
-        return status
-        
-        
-    def get_initial_data(self):
-        while True:
-            fm_projects, fn_status  = self.get_projects()
-            if fn_status == True:
-                return fm_projects
-    
+signal.signal(signal.SIGINT, signal_handler)   
 
 class DirCreator:
 #class members and constants secstion
@@ -223,45 +147,34 @@ class Worksection:
                 return ws_projects
 
 def run():
-    finmap = Finmap() 
     dir_creator = DirCreator() 
     worksection = Worksection()
 
-    fm_initial_set = finmap.get_initial_data()    
     dir_initial_set = dir_creator.get_project_dirs()
     ws_initial_set = worksection.get_initial_data()
     
-    initial_set = ws_initial_set.union(fm_initial_set).union(dir_initial_set)
+    initial_set = ws_initial_set.union(dir_initial_set)
     
     while True:   
         ws_projects, ws_status = worksection.get_projects()
-        fm_projects, fn_status  = finmap.get_projects()
         dirs = dir_creator.get_project_dirs()
 
-        logging.debug('run - \n\tws_projects: %s\n\tfm_projects: %s\n\tdirs: %s', ws_projects, fm_projects, dirs)
+        logging.debug('run - \n\tws_projects: %s\n\tdirs: %s', ws_projects, dirs)
 
-        base_set = ws_projects.union(dirs).union(fm_projects)
+        base_set = ws_projects.union(dirs)
         update_set = base_set - initial_set
         
         logging.debug('run - \n\tinitial_set: %s\n\tbase_set: %s\n\tupdate_set: %s', initial_set, base_set, update_set)
         
         dirs_to_create = update_set - dirs
-        fm_to_create = update_set - fm_projects
         ws_to_create = update_set - ws_projects
 
-        logging.debug('run - \n\tdirs_to_create: %s\n\tfm_to_create: %s\n\tws_to_create: %s', dirs_to_create, fm_to_create, ws_to_create)
+        logging.debug('run - \n\tdirs_to_create: %s\n\tws_to_create: %s', dirs_to_create, ws_to_create)
         
         not_created = set()
         
         for proj in dirs_to_create:
             dir_creator.make_project_dir_with_default_structure(proj)
-            
-        for proj in fm_to_create:
-            if finmap.make_finmap_proj(proj):
-                logging.info('run - %s finmap project CREATED!!!', proj)
-            else:
-                not_created.add(proj)
-                logging.error('run - failed to create %s finmap project', proj)
                 
         for proj in ws_to_create:
             if worksection.make_worksection_proj(proj):
