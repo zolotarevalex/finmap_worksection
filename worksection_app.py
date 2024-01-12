@@ -42,6 +42,7 @@ class Worksection:
     apiUrl = '/api/admin/v2/?action='
     GET_PROJECTS = 'get_projects'
     POST_PROJECTS = 'post_project'
+    POST_TASK = 'post_task'
     
 #class methods
 
@@ -49,7 +50,7 @@ class Worksection:
         return hashlib.md5((page + action + self.apiKey).encode('utf-8')).hexdigest()    
     
     def make_common_request_url(self, action, page = ''):
-        return self.domain + self.apiUrl + action + '&hash=' + self.make_md5(action, page)
+        return self.domain + self.apiUrl + action + f'&page={page}' +f'&hash={self.make_md5(action, page)}'
     
     def make_get_request_url(self, action, page = ''):
         return self.make_common_request_url(action, page)
@@ -85,11 +86,12 @@ class Worksection:
         
     def make_worksection_proj(self, proj, user_from, user_to, manager):
         status = False
+        proj_id = 0
         try:
             url_params = {
-               'email_user_from' : user_from,
-               'email_user_to' : user_to,
-               'email_manager' : manager
+              'email_user_from' : user_from,
+              'email_user_to' : user_to,
+              'email_manager' : manager
             }
 
             request_url = self.make_post_request_url(self.POST_PROJECTS, proj) + "&" + urlencode(url_params)
@@ -101,11 +103,67 @@ class Worksection:
             if projects_response.status_code == 200:
                 jProjects = json.loads(projects_response._content.decode('utf8').replace("'", '"'))
                 status = jProjects['status'] == 'ok'
+                proj_id = int(jProjects['data']['id'])
                 logging.debug('Worksection:make_worksection_proj - \n\tresponse JSON:%s', jProjects)
         except Exception as e:
             logging.error('Worksection:make_worksection_proj - excetpion caught: %s', str(e))
-        return status
+        return status, proj_id
+    
+    def make_worksection_proj_with_default_task(self, proj, sub_tasks_dict, user_from, user_to, manager):
+      tokens = proj.split('.')
+      if len(tokens) == 0:
+        print('ivalid project name: %s', proj)
+        return False
+      
+      task_id = 0
+
+      try:
+        task_id = int(tokens[0])
+      except Exception as e:
+          logging.error('Worksection:make_worksection_proj_with_default_task - excetpion caught: %s', str(e))
+          return False
+      
+      status, proj_id = self.make_worksection_proj(proj, user_from, user_to, manager)
+      if status == False:
+        return False
+
+      task_name = f'{task_id} (створити фінмап на ПРОЕКТ)'
+
+      subtasks_to_skip = ['СТАТУС', 'ДАТА ОТРИМАННЯ ЗАВДАННЯ']
+
+      try:  
+        url_param = {
+          'email_user_from' : user_from
+        }
         
+        url_params = "&" + urlencode(url_param)
+
+        for key, val in sub_tasks_dict.items():
+          if len(val) == 0:
+            print('need to skip %s - %s', key, val)
+            continue
+          if key in subtasks_to_skip:
+             continue
+          
+          print(f'need to kreate subtask {key}')
+          
+          todo_item = {'todo[]': f'{key}-{val}'}
+          url_params = url_params + "&" + urlencode(todo_item)
+
+        request_url = self.make_post_request_url(self.POST_TASK, task_name, page=f'/project/{proj_id}/') + url_params
+
+        task_response = requests.get(url=request_url)
+
+        logging.debug('Worksection:make_worksection_proj_with_default_task - \n\trequest_url: %s\n\tprojects_response: %s', request_url, task_response)
+
+        if task_response.status_code == 200:
+          jTask = json.loads(task_response._content.decode('utf8').replace("'", '"'))
+          status = jTask['status'] == 'ok'
+          logging.debug('Worksection:make_worksection_proj_with_default_task - \n\tresponse JSON:%s', jTask)
+      except Exception as e:
+          logging.error('Worksection:make_worksection_proj_with_default_task - excetpion caught: %s', str(e))
+      return status
+      
     def get_initial_data(self):
         while True:
             ws_projects, ws_status = self.get_projects()
@@ -116,7 +174,7 @@ class DirCreator:
 #class members and constants secstion
     #PROJ_BASE_DIR = 'projects'
     PROJ_BASE_DIR = '.'
-    PROJ_STRUCTURE = ['Из текущих', 'Проект', 'Спецификация', 'КД', 'Фото']
+    PROJ_STRUCTURE = ['МЧ', 'Проект', 'КД', 'Фото']
 
 #class methonds sectio
     def __init__(self, base_dir = '.'):
@@ -181,7 +239,8 @@ class SpreadsheetHelper:
                      'TASK_LINK_IDX',
                      'ANNEX_IDX'], start = 0)
   
-  SPREADSHEET_ID = '1fdZnAslBu1XSgBoQX3h1T5F3NS_Ss8ykrrD5r4nbFYE'
+  SPREADSHEET_ID = '166T5m2MVE5PVAc94Zncdn2uTJg6nbcrKfCu4eL1Gl3o'
+  SHEET_NAME = 'ОБЄКТИ'
   RANGE_START = ''
   RANGE_END = ''
 
@@ -220,8 +279,12 @@ class SpreadsheetHelper:
       except HttpError as error:
         print(f"An error occurred: {error}")
     return None
-      
+
+  def make_range(self, range_id_start, range_id_end):
+    return f'{self.SHEET_NAME}!{self.RANGE_START}{range_id_start}:{self.RANGE_END }{range_id_end}'
+
   def get_values(self, range_name):
+    print(f'range name: {range_name}')
     try:
       service = self.get_service(self.get_creds())
       if service != None:
@@ -231,36 +294,58 @@ class SpreadsheetHelper:
     return None
 
   def get_columns(self):
-      result = self.get_values(f'{self.RANGE_START}1:{self.RANGE_END }1')
+      result = self.get_values(self.make_range(1, 1))
       if result != None:
          values = result['values']
          if len(values) > 0:
             return values[0]
       return None
-
+  
+  def get_row_number(self):
+    try:
+      service = self.get_service(self.get_creds())
+      if service != None:
+        properties = 'sheets/properties/gridProperties'
+        ss_data = service.spreadsheets().get(spreadsheetId=self.SPREADSHEET_ID, fields=properties, ranges=f'{self.SHEET_NAME}').execute()
+        print(ss_data)
+        return ss_data['sheets'][0]['properties']['gridProperties']['rowCount']
+    except HttpError as error:
+      print(f"An error occurred: {error}")
+    return 0
+  
   def get_projects(self):
     columns = self.get_columns()
+    rows_count = self.get_row_number()
+    print(f'received {rows_count} rows')
+
     projects = {}
     project_names = set()
 
-    range_id = 2
-    while columns != None:
-      result = self.get_values(f'{self.RANGE_START}{range_id}:{self.RANGE_END }{range_id}')
+    range_id_start = 2
+    range_id_end = rows_count
+    if columns != None and rows_count > 0:
+      result = self.get_values(self.make_range(range_id_start, range_id_end))
       
       if result == None:
-        break
+        pass
       
       rows = result.get("values", [])
       if len(rows) == 0:
-        break
-      row = rows[0]
-      project = {}
-      for idx in range(1, len(row)):
-        project[columns[idx]] = row[idx]
-      proj_name = row[self.IDX['PROJ_IDX'].value]
-      projects[proj_name] = project
-      project_names.add(proj_name)
-      range_id = range_id + 1
+        pass
+
+      for row in rows:
+        if len(row) == 0:
+           continue
+        
+        proj_name = row[self.IDX['PROJ_IDX'].value]
+        if len(proj_name) == 0:
+           continue
+        
+        project = {}
+        for idx in range(0, len(row)):
+          project[columns[idx]] = row[idx]
+        projects[proj_name] = project
+        project_names.add(proj_name)
 
     return projects, project_names
   
@@ -269,8 +354,8 @@ class SpreadsheetHelper:
      return proj_names
 
 if __name__ == "__main__":
+  ssHelper = SpreadsheetHelper('C', 'R')
   ws = Worksection()
-  ssHelper = SpreadsheetHelper('A', 'N')
   dirCreator = DirCreator('test_dir')
 
   ws_set = ws.get_initial_data()
@@ -293,7 +378,7 @@ if __name__ == "__main__":
          continue
       if proj not in ws_projects:
           print(f'creating {proj} project')
-          ws.make_worksection_proj(proj, 'shurik.mindless86@gmail.com', 'shurik.mindless86@gmail.com', 'shurik.mindless86@gmail.com')
+          ws.make_worksection_proj_with_default_task(proj, projects[proj], 'shurik.mindless86@gmail.com', 'shurik.mindless86@gmail.com', 'shurik.mindless86@gmail.com')
       dirs = dirCreator.get_project_dirs()
       if proj not in dirs:
          dirCreator.make_project_dir_with_default_structure(proj)
